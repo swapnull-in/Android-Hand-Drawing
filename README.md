@@ -1,11 +1,10 @@
 Hand drawing in android canvas with eraser.
 
-DrawingView is extended from View & used to create a path on canvas based on movement of users fingers.
+Demo : https://play.google.com/store/apps/details?id=com.swap.handdrawing
 
-I am maintaing ArrayList of Path & Paint Object.
+DrawingView is extended from View & used to create a path on canvas based on movement of users finger.
 
-If User is selecting eraser then I am changing paint color from black to white & vice versa.
+Path & paint object is stored are maintained in a ArrayList. Eraser is achieved by changing paint object color property to white.
 
-You can add color to it.
-
-Yenjai.
+Different colors of lines can be achieved by changing paint object color property.
+ 
