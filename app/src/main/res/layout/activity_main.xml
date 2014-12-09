@@ -1,39 +1,35 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawing_question"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:padding="0dp"
+    android:orientation="vertical">
 
+    <com.swap.handdrawing.DrawingView
+        android:id="@+id/drawing"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-    <LinearLayout
-         xmlns:android="http://schemas.android.com/apk/res/android"
-                android:id="@+id/drawing_question"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginLeft="40dp"
-                android:layout_marginRight="30dp"
-                android:background="#FFFFFF"
-                android:orientation="horizontal" >
+    </com.swap.handdrawing.DrawingView>
 
-                <com.swap.handdrawing.DrawingView
-                    android:id="@+id/drawing"
-                    android:layout_width="0dp"
-                    android:layout_height="fill_parent"
-                    android:layout_marginBottom="10dp"
-                    android:layout_marginRight="5dp"
-                    android:layout_weight="1" >
-                </com.swap.handdrawing.DrawingView>
+    <RelativeLayout
+        android:id="@+id/eraserView"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+         android:background="@drawable/pannel"
+         android:padding="5dp">
 
-                <LinearLayout
-                    android:id="@+id/eraserView"
-                    android:layout_width="50dp"
-                    android:layout_height="fill_parent"
-                    android:layout_marginBottom="10dp"
-                    android:background="@drawable/custom_edit_text"
-                    android:padding="5dp" >
+        <ImageView
+            android:id="@+id/eraser"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentRight="true"
+            android:src="@drawable/eraser" />
 
-                    <ImageView
-                        android:id="@+id/eraser"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/eraser" />
-                </LinearLayout>
-            </LinearLayout>
+    </RelativeLayout>
+
+</LinearLayout>
     
  
