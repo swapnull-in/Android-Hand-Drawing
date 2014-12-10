@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 
+
 				if (drawingView.isEraserActive) {
 					drawingView.isEraserActive = false;
 
@@ -33,9 +34,10 @@ public class MainActivity extends Activity {
 					drawingView.isEraserActive = true;
 
 					eraser.setImageResource(R.drawable.pencil);
+
 				}
 
-			}
+            }
 		});
 		
 	}
