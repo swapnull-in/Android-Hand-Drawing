@@ -145,7 +145,7 @@ public class DrawingView extends View implements OnTouchListener {
     public void reset()
     {
         paths.clear();
- 
+
         invalidate();
     }
 
