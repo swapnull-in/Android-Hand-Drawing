@@ -21,6 +21,13 @@
          android:background="@drawable/pannel"
          android:padding="5dp">
 
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="100dp"
+            android:layout_height="44dp"
+            android:text="CLEAR"/>
+
+
         <ImageView
             android:id="@+id/eraser"
             android:layout_width="40dp"

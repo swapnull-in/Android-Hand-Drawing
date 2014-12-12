@@ -14,15 +14,16 @@ import android.view.View.OnTouchListener;
 import java.util.ArrayList;
 
 public class DrawingView extends View implements OnTouchListener {
+
 	private Canvas m_Canvas;
 
 	private Path m_Path;
 
 	private Paint m_Paint;
 
-	ArrayList<Pair<Path, Paint>> paths = new ArrayList<Pair<Path, Paint>>();
+	private ArrayList<Pair<Path, Paint>> paths = new ArrayList<Pair<Path, Paint>>();
 
-	ArrayList<Pair<Path, Paint>> undonePaths = new ArrayList<Pair<Path, Paint>>();
+	private ArrayList<Pair<Path, Paint>> undonePaths = new ArrayList<Pair<Path, Paint>>();
 
 	private float mX, mY;
 
@@ -31,8 +32,10 @@ public class DrawingView extends View implements OnTouchListener {
 	public static boolean isEraserActive = false; 
 
 	public DrawingView(Context context, AttributeSet attr) {
-		super(context);
+        super(context, attr);
+
 		setFocusable(true);
+
 		setFocusableInTouchMode(true);
 		
 		setBackgroundColor(Color.WHITE);
@@ -138,6 +141,13 @@ public class DrawingView extends View implements OnTouchListener {
 		Paint newPaint = new Paint(m_Paint); // Clones the mPaint object
 		paths.add(new Pair<Path, Paint>(m_Path, newPaint));
 	}
+
+    public void reset()
+    {
+        paths.clear();
+ 
+        invalidate();
+    }
 
 //	public void onClickPenColorButton(int penColor) {
 //

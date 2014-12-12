@@ -4,43 +4,34 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.ImageView;
 
-public class MainActivity extends Activity {
-	
-	private ImageView eraser;
-	
+public class MainActivity extends Activity implements OnClickListener {
 
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
-		
-		final DrawingView drawingView = (DrawingView) findViewById(R.id.drawing);
-		
-		eraser = (ImageView) findViewById(R.id.eraser);
-		eraser.setOnClickListener(new OnClickListener() {
+    private final String tag = "MainActivity";
 
-			@Override
-			public void onClick(View v) {
+    private ImageView eraser;
+    private Button btnClear;
+
+    private DrawingView drawingView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        drawingView = (DrawingView) findViewById(R.id.drawing);
+
+        btnClear = (Button) findViewById(R.id.btnClear);
+        btnClear.setOnClickListener(this);
+
+        eraser = (ImageView) findViewById(R.id.eraser);
+        eraser.setOnClickListener(this);
+
+    }
 
 
-				if (drawingView.isEraserActive) {
-					drawingView.isEraserActive = false;
-
-					eraser.setImageResource(R.drawable.eraser);
-
-				} else {
-					drawingView.isEraserActive = true;
-
-					eraser.setImageResource(R.drawable.pencil);
-
-				}
-
-            }
-		});
-		
-	}
 
 //	@Override
 //	public boolean onCreateOptionsMenu(Menu menu) {
@@ -49,4 +40,29 @@ public class MainActivity extends Activity {
 //		return true;
 //	}
 
+
+    @Override
+    public void onClick(View v) {
+
+        if (v == eraser) {
+
+            if (drawingView.isEraserActive) {
+
+                drawingView.isEraserActive = false;
+                eraser.setImageResource(R.drawable.eraser);
+
+            } else {
+
+                drawingView.isEraserActive = true;
+                eraser.setImageResource(R.drawable.pencil);
+            }
+
+        } else if (v == btnClear) {
+
+            drawingView.reset();
+
+         }
+
+
+    }
 }
