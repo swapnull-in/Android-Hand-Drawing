@@ -49,6 +49,17 @@
             android:background="#000000"
             />
 
+        <Button
+            android:id="@+id/btnChooseImage"
+            android:layout_width="80dp"
+            android:layout_height="44dp"
+            android:layout_marginLeft="5dp"
+            android:layout_toRightOf="@+id/btnShare"
+            android:textColor="#FFFFFF"
+            android:background="#000000"
+            android:text="CHOOSE"
+            />
+
         <ImageView
             android:id="@+id/eraser"
             android:layout_width="40dp"

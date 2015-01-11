@@ -3,18 +3,23 @@ package com.swap.handdrawing;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.UUID;
 
 public class MainActivity extends Activity implements OnClickListener {
@@ -22,9 +27,12 @@ public class MainActivity extends Activity implements OnClickListener {
     private final String tag = "MainActivity";
 
     private ImageView eraser;
+    private Button btnChooseImage;
     private ImageButton btnClear, btnSave, btnShare;
 
     private DrawingView drawingView;
+
+    private static final int SELECT_PHOTO = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +43,9 @@ public class MainActivity extends Activity implements OnClickListener {
             setContentView(R.layout.activity_main);
 
             drawingView = (DrawingView) findViewById(R.id.drawing);
+
+            btnChooseImage = (Button) findViewById(R.id.btnChooseImage);
+            btnChooseImage.setOnClickListener(this);
 
             btnClear = (ImageButton) findViewById(R.id.btnClear);
             btnClear.setOnClickListener(this);
@@ -80,6 +91,7 @@ public class MainActivity extends Activity implements OnClickListener {
         } else if (v == btnClear) {
 
             drawingView.reset();
+            drawingView.setBackground(null);
 
         } else if (v == btnSave) {
 
@@ -92,7 +104,15 @@ public class MainActivity extends Activity implements OnClickListener {
 
             share.putExtra(Intent.EXTRA_STREAM, Uri.parse(saveImage().getAbsolutePath())); //"file:///sdcard/temporary_file.jpg"
             startActivity(Intent.createChooser(share, "Share Image"));
+
+        }else if(v == btnChooseImage)  {
+
+            Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
+            photoPickerIntent.setType("image/*");
+            startActivityForResult(photoPickerIntent, SELECT_PHOTO);
+
         }
+
     }
 
 
@@ -120,5 +140,30 @@ public class MainActivity extends Activity implements OnClickListener {
 
         return f;
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) {
+        super.onActivityResult(requestCode, resultCode, imageReturnedIntent);
+
+        switch(requestCode) {
+            case SELECT_PHOTO:
+                if(resultCode == RESULT_OK){
+                    Uri selectedImage = imageReturnedIntent.getData();
+                    InputStream imageStream = null;
+                    try {
+                        imageStream = getContentResolver().openInputStream(selectedImage);
+                        Bitmap bitmap = BitmapFactory.decodeStream(imageStream);
+
+                        BitmapDrawable ob = new BitmapDrawable(getResources(), bitmap);
+
+                        drawingView.setBackground(ob);
+
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+        }
+    }
+
 
 }
