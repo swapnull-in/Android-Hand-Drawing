@@ -164,13 +164,13 @@ public class MainActivity extends Activity implements OnClickListener {
 
                         BitmapDrawable ob = new BitmapDrawable(getResources(), bitmap);
 
-                        drawingView.setBackgroundDrawable(ob);
+                        drawingView.setBackground(ob);
 
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
                 }
-
+                break;
             case CAMERA_REQUEST:
                 if (resultCode == RESULT_OK) {
 
@@ -178,7 +178,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
                     BitmapDrawable ob = new BitmapDrawable(getResources(), photo);
 
-                    drawingView.setBackgroundDrawable(ob);
+                    drawingView.setBackground(ob);
 
                 }
         }
