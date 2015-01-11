@@ -28,17 +28,18 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private ImageView eraser;
     private Button btnChooseImage;
-    private ImageButton btnClear, btnSave, btnShare;
+    private ImageButton btnClear, btnSave, btnShare, btnCamera;
 
     private DrawingView drawingView;
 
     private static final int SELECT_PHOTO = 100;
+    private static final int CAMERA_REQUEST = 1888;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if(savedInstanceState == null) {
+        if (savedInstanceState == null) {
 
             setContentView(R.layout.activity_main);
 
@@ -55,6 +56,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
             btnShare = (ImageButton) findViewById(R.id.btnShare);
             btnShare.setOnClickListener(this);
+
+            btnCamera = (ImageButton) findViewById(R.id.btnCamera);
+            btnCamera.setOnClickListener(this);
 
             eraser = (ImageView) findViewById(R.id.eraser);
             eraser.setOnClickListener(this);
@@ -97,6 +101,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
             saveImage();
 
+        } else if (v == btnCamera) {
+
+            Intent cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+            startActivityForResult(cameraIntent, CAMERA_REQUEST);
+
         } else if (v == btnShare) {
 
             Intent share = new Intent(Intent.ACTION_SEND);
@@ -105,7 +114,7 @@ public class MainActivity extends Activity implements OnClickListener {
             share.putExtra(Intent.EXTRA_STREAM, Uri.parse(saveImage().getAbsolutePath())); //"file:///sdcard/temporary_file.jpg"
             startActivity(Intent.createChooser(share, "Share Image"));
 
-        }else if(v == btnChooseImage)  {
+        } else if (v == btnChooseImage) {
 
             Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
             photoPickerIntent.setType("image/*");
@@ -116,8 +125,7 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
 
-    public File saveImage()
-    {
+    public File saveImage() {
         drawingView.setDrawingCacheEnabled(true);
         Bitmap bm = drawingView.getDrawingCache();
 
@@ -125,7 +133,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
         File f = null;
 
-        f = new File(fPath,  UUID.randomUUID().toString()+".png");
+        f = new File(fPath, UUID.randomUUID().toString() + ".png");
 
         try {
             FileOutputStream strm = new FileOutputStream(f);
@@ -133,8 +141,7 @@ public class MainActivity extends Activity implements OnClickListener {
             strm.close();
 
             Toast.makeText(getApplicationContext(), "Image is saved successfully.", Toast.LENGTH_SHORT).show();
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -145,9 +152,10 @@ public class MainActivity extends Activity implements OnClickListener {
     protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) {
         super.onActivityResult(requestCode, resultCode, imageReturnedIntent);
 
-        switch(requestCode) {
+        switch (requestCode) {
+
             case SELECT_PHOTO:
-                if(resultCode == RESULT_OK){
+                if (resultCode == RESULT_OK) {
                     Uri selectedImage = imageReturnedIntent.getData();
                     InputStream imageStream = null;
                     try {
@@ -156,11 +164,22 @@ public class MainActivity extends Activity implements OnClickListener {
 
                         BitmapDrawable ob = new BitmapDrawable(getResources(), bitmap);
 
-                        drawingView.setBackground(ob);
+                        drawingView.setBackgroundDrawable(ob);
 
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
+                }
+
+            case CAMERA_REQUEST:
+                if (resultCode == RESULT_OK) {
+
+                    Bitmap photo = (Bitmap) imageReturnedIntent.getExtras().get("data");
+
+                    BitmapDrawable ob = new BitmapDrawable(getResources(), photo);
+
+                    drawingView.setBackgroundDrawable(ob);
+
                 }
         }
     }

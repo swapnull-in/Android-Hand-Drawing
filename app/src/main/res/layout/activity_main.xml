@@ -49,12 +49,22 @@
             android:background="#000000"
             />
 
+        <ImageButton
+            android:id="@+id/btnCamera"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginLeft="5dp"
+            android:layout_toRightOf="@+id/btnShare"
+            android:src="@drawable/ic_action_camera"
+            android:background="#000000"
+            />
+
         <Button
             android:id="@+id/btnChooseImage"
             android:layout_width="80dp"
             android:layout_height="44dp"
             android:layout_marginLeft="5dp"
-            android:layout_toRightOf="@+id/btnShare"
+            android:layout_toRightOf="@+id/btnCamera"
             android:textColor="#FFFFFF"
             android:background="#000000"
             android:text="CHOOSE"
