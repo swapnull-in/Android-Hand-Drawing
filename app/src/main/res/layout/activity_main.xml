@@ -27,6 +27,19 @@
             android:layout_height="44dp"
             android:text="CLEAR"/>
 
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="100dp"
+            android:layout_height="44dp"
+            android:layout_toRightOf="@+id/btnClear"
+            android:text="SAVE"/>
+
+        <Button
+            android:id="@+id/btnShare"
+            android:layout_width="100dp"
+            android:layout_height="44dp"
+            android:layout_toRightOf="@+id/btnSave"
+            android:text="SHARE"/>
 
         <ImageView
             android:id="@+id/eraser"

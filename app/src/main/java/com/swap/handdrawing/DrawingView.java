@@ -29,7 +29,7 @@ public class DrawingView extends View implements OnTouchListener {
 
 	private static final float TOUCH_TOLERANCE = 4;
 
-	public static boolean isEraserActive = false; 
+	private boolean isEraserActive = false;
 
 	public DrawingView(Context context, AttributeSet attr) {
         super(context, attr);
@@ -141,6 +141,23 @@ public class DrawingView extends View implements OnTouchListener {
 		Paint newPaint = new Paint(m_Paint); // Clones the mPaint object
 		paths.add(new Pair<Path, Paint>(m_Path, newPaint));
 	}
+
+    public void activateEraser()
+    {
+        isEraserActive = true;
+    }
+
+
+    public void deactivateEraser()
+    {
+        isEraserActive = false;
+    }
+
+    public boolean isEraserActive()
+    {
+        return isEraserActive;
+    }
+
 
     public void reset()
     {
