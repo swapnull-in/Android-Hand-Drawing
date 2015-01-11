@@ -8,7 +8,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -22,7 +22,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private final String tag = "MainActivity";
 
     private ImageView eraser;
-    private Button btnClear, btnSave, btnShare;
+    private ImageButton btnClear, btnSave, btnShare;
 
     private DrawingView drawingView;
 
@@ -36,13 +36,13 @@ public class MainActivity extends Activity implements OnClickListener {
 
             drawingView = (DrawingView) findViewById(R.id.drawing);
 
-            btnClear = (Button) findViewById(R.id.btnClear);
+            btnClear = (ImageButton) findViewById(R.id.btnClear);
             btnClear.setOnClickListener(this);
 
-            btnSave = (Button) findViewById(R.id.btnSave);
+            btnSave = (ImageButton) findViewById(R.id.btnSave);
             btnSave.setOnClickListener(this);
 
-            btnShare = (Button) findViewById(R.id.btnShare);
+            btnShare = (ImageButton) findViewById(R.id.btnShare);
             btnShare.setOnClickListener(this);
 
             eraser = (ImageView) findViewById(R.id.eraser);

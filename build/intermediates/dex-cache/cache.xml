@@ -6,7 +6,7 @@
         jumboMode="false"
         revision="21.1.1"
         sha1="44ec51e9d395a47aab135e5e1b556c0007442156">
-        <dex dex="/Volumes/PLUG IN/Work/AndroidWorkspace/Android Hand Drawing/app/build/intermediates/pre-dexed/debug/support-v4-18.0.0-92e0356ec94ee4d530e2f10e68e783e61c245ec4.jar" />
+        <dex dex="/Volumes/PLUG IN/Work/AndroidWorkspace/Android Hand Drawing/app/build/intermediates/pre-dexed/release/support-v4-18.0.0-92e0356ec94ee4d530e2f10e68e783e61c245ec4.jar" />
     </item>
 
 </items>
