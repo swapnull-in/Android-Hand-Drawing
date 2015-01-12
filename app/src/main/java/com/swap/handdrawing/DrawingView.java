@@ -46,6 +46,7 @@ public class DrawingView extends View implements OnTouchListener {
 	}
 
 	public void onCanvasInitialization() {
+
 		m_Paint = new Paint();
 		m_Paint.setAntiAlias(true);
 		m_Paint.setDither(true);

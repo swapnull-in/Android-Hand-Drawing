@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
@@ -164,7 +165,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
                         BitmapDrawable ob = new BitmapDrawable(getResources(), bitmap);
 
-                        drawingView.setBackground(ob);
+                        if(Build.VERSION.SDK_INT >= 16)
+                        {
+                            drawingView.setBackground(ob);
+                        }else {
+                            drawingView.setBackgroundDrawable(ob);
+                        }
 
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
@@ -178,8 +184,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
                     BitmapDrawable ob = new BitmapDrawable(getResources(), photo);
 
-                    drawingView.setBackground(ob);
-
+                    if(Build.VERSION.SDK_INT >= 16)
+                    {
+                        drawingView.setBackground(ob);
+                    }else {
+                        drawingView.setBackgroundDrawable(ob);
+                    }
                 }
         }
     }
