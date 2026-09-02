@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Primary Vibrant Paint Arc -->
+    <path
+        android:pathData="M 28,76 C 36,54 50,44 68,40 M 26,80 C 40,80 58,72 72,52"
+        android:strokeWidth="5"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="26"
+                android:startY="80"
+                android:endX="72"
+                android:endY="40"
+                android:type="linear">
+                <item android:color="#EC4899" android:offset="0.0" />
+                <item android:color="#A855F7" android:offset="0.5" />
+                <item android:color="#06B6D4" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Secondary Accent Arc -->
+    <path
+        android:pathData="M 24,64 C 32,48 46,38 62,34"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="24"
+                android:startY="64"
+                android:endX="62"
+                android:endY="34"
+                android:type="linear">
+                <item android:color="#F59E0B" android:offset="0.0" />
+                <item android:color="#10B981" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Stylus / Brush Handle -->
+    <path
+        android:pathData="M 78,26 L 82,30 L 52,66 L 46,66 L 48,60 Z"
+        android:fillColor="#F1F5F9" />
+
+    <!-- Stylus Metallic Collar -->
+    <path
+        android:pathData="M 50,63 L 53,60 L 50,57 L 47,60 Z"
+        android:fillColor="#CBD5E1" />
+
+    <!-- Brush Tip -->
+    <path
+        android:pathData="M 46,66 L 40,72 L 48,66 Z"
+        android:fillColor="#F43F5E" />
+
+    <!-- Creative Sparkles -->
+    <path
+        android:pathData="M 78,38 L 80,42 L 84,40 L 80,44 L 82,48 L 78,44 L 74,46 L 76,42 Z"
+        android:fillColor="#FDE047" />
+    <path
+        android:pathData="M 38,30 L 39.5,33 L 43,34 L 40,36 L 41,39.5 L 38,37 L 35,38.5 L 36.5,35.5 Z"
+        android:fillColor="#67E8F9" />
+</vector>
