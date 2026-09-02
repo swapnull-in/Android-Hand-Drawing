@@ -7,74 +7,154 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.AutoFixOff
+import androidx.compose.material.icons.outlined.Brush
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import java.io.File
 import java.io.OutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    viewModel: DrawingViewModel = viewModel()
+) {
     val context = LocalContext.current
-    var isEraserMode by remember { mutableStateOf(false) }
-    var backgroundImage by remember { mutableStateOf<Bitmap?>(null) }
-    var paperStyle by remember { mutableStateOf(PaperStyle.PLAIN) }
-    
-    var selectedColor by remember { mutableStateOf(Color.Black) }
-    var strokeWidth by remember { mutableStateOf(5f) }
-    
-    val drawingState = remember { DrawingState() }
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var showBrushSettings by remember { mutableStateOf(false) }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val sheetState = rememberModalBottomSheetState()
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            context.contentResolver.openInputStream(it)?.use { stream ->
-                backgroundImage = BitmapFactory.decodeStream(stream)
+            try {
+                context.contentResolver.openInputStream(it)?.use { stream ->
+                    val bitmap = BitmapFactory.decodeStream(stream)
+                    viewModel.updateBackgroundImage(bitmap)
+                }
+            } catch (_: Exception) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Failed to load image from gallery")
+                }
             }
         }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap: Bitmap? ->
-        bitmap?.let {
-            backgroundImage = it
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success && photoUri != null) {
+            try {
+                context.contentResolver.openInputStream(photoUri!!)?.use { stream ->
+                    val bitmap = BitmapFactory.decodeStream(stream)
+                    viewModel.updateBackgroundImage(bitmap)
+                }
+            } catch (_: Exception) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Failed to load photo")
+                }
+            }
+        }
+    }
+
+    fun launchCameraWithUri() {
+        try {
+            val imagesDir = File(context.cacheDir, "images").apply { mkdirs() }
+            val file = File(imagesDir, "camera_photo_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            photoUri = uri
+            cameraLauncher.launch(uri)
+        } catch (_: Exception) {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Camera unavailable on this device")
+            }
         }
     }
 
@@ -82,119 +162,143 @@ fun MainScreen() {
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            try {
-                cameraLauncher.launch(null)
-            } catch (_: Exception) {
-                Toast.makeText(context, "Camera not available", Toast.LENGTH_SHORT).show()
-            }
+            launchCameraWithUri()
         } else {
-            Toast.makeText(context, "Camera permission required to take photos", Toast.LENGTH_SHORT).show()
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Camera permission is required")
+            }
         }
     }
 
     fun launchCamera() {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            try {
-                cameraLauncher.launch(null)
-            } catch (_: Exception) {
-                Toast.makeText(context, "Camera not available", Toast.LENGTH_SHORT).show()
-            }
+            launchCameraWithUri()
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
+    if (viewModel.showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.showClearConfirmDialog = false },
+            title = { Text("Clear Canvas") },
+            text = { Text("Are you sure you want to clear your drawing and background? This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearCanvas()
+                        viewModel.showClearConfirmDialog = false
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Canvas cleared")
+                        }
+                    }
+                ) {
+                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.showClearConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Drawing Pro", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
-                    IconButton(onClick = { drawingState.undo() }) {
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
+                    IconButton(
+                        onClick = { viewModel.undo() },
+                        enabled = viewModel.paths.isNotEmpty()
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Undo,
+                            contentDescription = "Undo",
+                            tint = if (viewModel.paths.isNotEmpty()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { drawingState.redo() }) {
-                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                    IconButton(
+                        onClick = { viewModel.redo() },
+                        enabled = viewModel.undonePaths.isNotEmpty()
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Redo,
+                            contentDescription = "Redo",
+                            tint = if (viewModel.undonePaths.isNotEmpty()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
                     }
-                    IconButton(onClick = {
-                        drawingState.clear()
-                        backgroundImage = null
-                    }) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All")
+                    IconButton(
+                        onClick = { viewModel.showClearConfirmDialog = true },
+                        enabled = viewModel.paths.isNotEmpty() || viewModel.backgroundImage != null
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteSweep,
+                            contentDescription = "Clear All"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
         },
         bottomBar = {
-            Column {
-                // Brush Settings Panel
-                AnimatedVisibility(
-                    visible = showBrushSettings,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                ) {
-                    BrushSettingsPanel(
-                        selectedColor = selectedColor,
-                        onColorSelected = { selectedColor = it },
-                        strokeWidth = strokeWidth,
-                        onStrokeWidthChanged = { strokeWidth = it },
-                        paperStyle = paperStyle,
-                        onPaperStyleChanged = { paperStyle = it }
-                    )
-                }
-
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-                ) {
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = { galleryLauncher.launch("image/*") },
-                        icon = { Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Gallery") },
-                        label = { Text("Gallery") }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = { launchCamera() },
-                        icon = { Icon(Icons.Default.PhotoCamera, contentDescription = "Camera") },
-                        label = { Text("Camera") }
-                    )
-                    NavigationBarItem(
-                        selected = showBrushSettings,
-                        onClick = { 
-                            showBrushSettings = !showBrushSettings 
-                            if (showBrushSettings) isEraserMode = false
-                        },
-                        icon = { Icon(if (showBrushSettings) Icons.Default.Brush else Icons.Outlined.Brush, contentDescription = "Brush") },
-                        label = { Text("Tools") }
-                    )
-                    NavigationBarItem(
-                        selected = isEraserMode,
-                        onClick = { 
-                            isEraserMode = !isEraserMode 
-                            if (isEraserMode) showBrushSettings = false
-                        },
-                        icon = { Icon(if (isEraserMode) Icons.Default.AutoFixHigh else Icons.Outlined.AutoFixOff, contentDescription = "Eraser") },
-                        label = { Text("Eraser") }
-                    )
-                }
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+            ) {
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { galleryLauncher.launch("image/*") },
+                    icon = { Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Gallery") },
+                    label = { Text("Gallery") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { launchCamera() },
+                    icon = { Icon(Icons.Default.PhotoCamera, contentDescription = "Camera") },
+                    label = { Text("Camera") }
+                )
+                NavigationBarItem(
+                    selected = viewModel.showBrushSettingsSheet,
+                    onClick = {
+                        viewModel.showBrushSettingsSheet = true
+                    },
+                    icon = { Icon(if (viewModel.showBrushSettingsSheet) Icons.Default.Brush else Icons.Outlined.Brush, contentDescription = "Tools") },
+                    label = { Text("Tools") }
+                )
+                NavigationBarItem(
+                    selected = viewModel.isEraserMode,
+                    onClick = { viewModel.toggleEraserMode() },
+                    icon = { Icon(if (viewModel.isEraserMode) Icons.Default.AutoFixHigh else Icons.Outlined.AutoFixOff, contentDescription = "Eraser") },
+                    label = { Text("Eraser") }
+                )
             }
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    val uri = saveImageToMediaStore(context, drawingState.paths, backgroundImage, canvasSize, paperStyle)
+                    val uri = saveImageToMediaStore(
+                        context = context,
+                        paths = viewModel.paths,
+                        backgroundImage = viewModel.backgroundImage,
+                        size = canvasSize,
+                        paperStyle = viewModel.paperStyle
+                    )
                     if (uri != null) {
-                        Toast.makeText(context, "Saved to Gallery", Toast.LENGTH_SHORT).show()
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Drawing saved to Pictures")
+                        }
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
-                Icon(Icons.Default.Save, contentDescription = "Save")
+                Icon(Icons.Default.Save, contentDescription = "Save Drawing")
             }
         }
     ) { padding ->
@@ -205,37 +309,54 @@ fun MainScreen() {
                 .onSizeChanged { canvasSize = it }
         ) {
             DrawingCanvas(
-                paths = drawingState.paths,
-                currentPath = drawingState.currentPath,
-                pathUpdateTrigger = drawingState.pathUpdateTrigger,
-                currentPathColor = selectedColor,
-                currentPathStrokeWidth = if (isEraserMode) 60f else strokeWidth,
-                isEraserMode = isEraserMode,
-                paperStyle = paperStyle,
-                onPathStarted = { offset ->
-                    drawingState.startPath(offset, if (isEraserMode) 60f else strokeWidth, isEraserMode, selectedColor)
-                },
-                onPathMoved = { offset ->
-                    drawingState.movePath(offset)
-                },
-                onPathEnded = {
-                    drawingState.endPath()
-                },
-                backgroundImage = backgroundImage
+                paths = viewModel.paths,
+                currentPath = viewModel.currentPath,
+                pathUpdateTrigger = viewModel.pathUpdateTrigger,
+                currentPathColor = viewModel.selectedColor,
+                currentPathStrokeWidth = if (viewModel.isEraserMode) 60f else viewModel.strokeWidth,
+                isEraserMode = viewModel.isEraserMode,
+                paperStyle = viewModel.paperStyle,
+                onPathStarted = { offset -> viewModel.startPath(offset) },
+                onPathMoved = { offset -> viewModel.movePath(offset) },
+                onPathEnded = { viewModel.endPath() },
+                backgroundImage = viewModel.backgroundImage
             )
-            
-            // Floating Share Button
+
             SmallFloatingActionButton(
                 onClick = {
-                    val uri = saveImageToMediaStore(context, drawingState.paths, backgroundImage, canvasSize, paperStyle)
-                    if (uri != null) shareImage(context, uri)
+                    val uri = saveImageToMediaStore(
+                        context = context,
+                        paths = viewModel.paths,
+                        backgroundImage = viewModel.backgroundImage,
+                        size = canvasSize,
+                        paperStyle = viewModel.paperStyle
+                    )
+                    if (uri != null) {
+                        shareImage(context, uri)
+                    }
                 },
                 modifier = Modifier
                     .padding(16.dp)
                     .align(Alignment.TopEnd),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
             ) {
                 Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(20.dp))
+            }
+        }
+
+        if (viewModel.showBrushSettingsSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.showBrushSettingsSheet = false },
+                sheetState = sheetState
+            ) {
+                BrushSettingsPanel(
+                    selectedColor = viewModel.selectedColor,
+                    onColorSelected = { color -> viewModel.updateSelectedColor(color) },
+                    strokeWidth = viewModel.strokeWidth,
+                    onStrokeWidthChanged = { width -> viewModel.updateStrokeWidth(width) },
+                    paperStyle = viewModel.paperStyle,
+                    onPaperStyleChanged = { style -> viewModel.updatePaperStyle(style) }
+                )
             }
         }
     }
@@ -251,65 +372,80 @@ fun BrushSettingsPanel(
     onPaperStyleChanged: (PaperStyle) -> Unit
 ) {
     val colors = listOf(
-        Color.Black, Color(0xFFD32F2F), Color(0xFF1976D2), Color(0xFF388E3C), 
+        Color.Black, Color(0xFFD32F2F), Color(0xFF1976D2), Color(0xFF388E3C),
         Color(0xFFFBC02D), Color(0xFF7B1FA2), Color(0xFF0097A7), Color(0xFFE64A19),
-        Color(0xFF5D4037), Color(0xFF455A64)
+        Color(0xFF5D4037), Color(0xFF455A64), Color.White
     )
 
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(16.dp),
-        color = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Text("Colors", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            LazyRow(
-                modifier = Modifier.padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(colors) { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .border(
-                                width = if (selectedColor == color) 4.dp else 0.dp,
-                                color = MaterialTheme.colorScheme.outline,
-                                shape = CircleShape
-                            )
-                            .clickable { onColorSelected(color) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Size", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(16.dp))
-                Slider(
-                    value = strokeWidth,
-                    onValueChange = onStrokeWidthChanged,
-                    valueRange = 1f..100f,
-                    modifier = Modifier.weight(1f)
+        Text("Colors", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        LazyRow(
+            modifier = Modifier.padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(colors) { color ->
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .border(
+                            width = if (selectedColor == color) 3.5.dp else 1.dp,
+                            color = if (selectedColor == color) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                            shape = CircleShape
+                        )
+                        .clickable { onColorSelected(color) }
                 )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("${strokeWidth.toInt()}", style = MaterialTheme.typography.bodyMedium)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Canvas Style", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            Row(
-                modifier = Modifier.padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PaperStyleChip("Plain", paperStyle == PaperStyle.PLAIN) { onPaperStyleChanged(PaperStyle.PLAIN) }
-                PaperStyleChip("Grid", paperStyle == PaperStyle.GRID) { onPaperStyleChanged(PaperStyle.GRID) }
-                PaperStyleChip("Dots", paperStyle == PaperStyle.DOTS) { onPaperStyleChanged(PaperStyle.DOTS) }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Brush Size", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Box(
+                modifier = Modifier.size(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size((strokeWidth / 2f).coerceIn(4f, 28f).dp)
+                        .clip(CircleShape)
+                        .background(selectedColor)
+                )
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = strokeWidth,
+                onValueChange = onStrokeWidthChanged,
+                valueRange = 2f..80f,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text("${strokeWidth.toInt()} px", style = MaterialTheme.typography.bodyMedium)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Canvas Style", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PaperStyleChip("Plain", paperStyle == PaperStyle.PLAIN) { onPaperStyleChanged(PaperStyle.PLAIN) }
+            PaperStyleChip("Grid", paperStyle == PaperStyle.GRID) { onPaperStyleChanged(PaperStyle.GRID) }
+            PaperStyleChip("Dots", paperStyle == PaperStyle.DOTS) { onPaperStyleChanged(PaperStyle.DOTS) }
+            PaperStyleChip("Ruled", paperStyle == PaperStyle.RULED) { onPaperStyleChanged(PaperStyle.RULED) }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -325,97 +461,28 @@ fun PaperStyleChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
     )
 }
 
-class DrawingState {
-    val paths = mutableStateListOf<PathData>()
-    val undonePaths = mutableStateListOf<PathData>()
-    
-    private var _currentPath by mutableStateOf<Path?>(null)
-    val currentPath: Path? get() = _currentPath
-
-    private var previousPoint: Offset? = null
-    private var lastStrokeWidth: Float = 5f
-    private var lastIsEraser: Boolean = false
-    private var lastColor: Color = Color.Black
-
-    var pathUpdateTrigger by mutableStateOf(0L)
-        private set
-
-    fun startPath(offset: Offset, strokeWidth: Float, isEraser: Boolean, color: Color) {
-        undonePaths.clear()
-        lastStrokeWidth = strokeWidth
-        lastIsEraser = isEraser
-        lastColor = color
-        
-        val newPath = Path().apply {
-            moveTo(offset.x, offset.y)
-        }
-        _currentPath = newPath
-        previousPoint = offset
-        pathUpdateTrigger++
-    }
-
-    fun movePath(offset: Offset) {
-        val prev = previousPoint ?: return
-        val current = _currentPath ?: return
-
-        val midX = (prev.x + offset.x) / 2
-        val midY = (prev.y + offset.y) / 2
-        
-        current.quadraticTo(prev.x, prev.y, midX, midY)
-        
-        previousPoint = offset
-        
-        pathUpdateTrigger++
-    }
-
-    fun endPath() {
-        _currentPath?.let {
-            paths.add(PathData(it, lastColor, lastStrokeWidth, lastIsEraser))
-        }
-        _currentPath = null
-        previousPoint = null
-        pathUpdateTrigger++
-    }
-
-    fun undo() {
-        if (paths.isNotEmpty()) {
-            undonePaths.add(paths.removeAt(paths.size - 1))
-            pathUpdateTrigger++
-        }
-    }
-
-    fun redo() {
-        if (undonePaths.isNotEmpty()) {
-            paths.add(undonePaths.removeAt(undonePaths.size - 1))
-            pathUpdateTrigger++
-        }
-    }
-
-    fun clear() {
-        paths.clear()
-        undonePaths.clear()
-        _currentPath = null
-        pathUpdateTrigger++
-    }
-}
-
-fun saveImageToMediaStore(context: Context, paths: List<PathData>, backgroundImage: Bitmap?, size: IntSize, paperStyle: PaperStyle): Uri? {
+fun saveImageToMediaStore(
+    context: Context,
+    paths: List<PathData>,
+    backgroundImage: Bitmap?,
+    size: IntSize,
+    paperStyle: PaperStyle
+): Uri? {
     if (size.width <= 0 || size.height <= 0) return null
 
     val bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
+    val canvas = Canvas(bitmap)
     canvas.drawColor(android.graphics.Color.WHITE)
 
-    // Draw Paper Style on Bitmap
-    val paperPaint = android.graphics.Paint().apply {
+    val paperPaint = Paint().apply {
         color = android.graphics.Color.LTGRAY
-        alpha = 50
-        strokeWidth = 1f
+        alpha = 60
+        strokeWidth = 2f
     }
-    
+
     when (paperStyle) {
         PaperStyle.GRID -> {
-            val step = 100f // Larger step for high res bitmap
+            val step = 100f
             for (x in 0..(size.width / step).toInt()) {
                 canvas.drawLine(x * step, 0f, x * step, size.height.toFloat(), paperPaint)
             }
@@ -427,29 +494,41 @@ fun saveImageToMediaStore(context: Context, paths: List<PathData>, backgroundIma
             val step = 100f
             for (x in 0..(size.width / step).toInt()) {
                 for (y in 0..(size.height / step).toInt()) {
-                    canvas.drawCircle(x * step, y * step, 5f, paperPaint)
+                    canvas.drawCircle(x * step, y * step, 6f, paperPaint)
                 }
             }
+        }
+        PaperStyle.RULED -> {
+            val step = 120f
+            for (y in 1..(size.height / step).toInt()) {
+                canvas.drawLine(0f, y * step, size.width.toFloat(), y * step, paperPaint)
+            }
+            val redMarginPaint = Paint().apply {
+                color = android.graphics.Color.RED
+                alpha = 100
+                strokeWidth = 4f
+            }
+            canvas.drawLine(150f, 0f, 150f, size.height.toFloat(), redMarginPaint)
         }
         PaperStyle.PLAIN -> {}
     }
 
     backgroundImage?.let {
-        val src = android.graphics.Rect(0, 0, it.width, it.height)
-        val dst = android.graphics.Rect(0, 0, size.width, size.height)
+        val src = Rect(0, 0, it.width, it.height)
+        val dst = Rect(0, 0, size.width, size.height)
         canvas.drawBitmap(it, src, dst, null)
     }
 
-    val paint = android.graphics.Paint().apply {
+    val paint = Paint().apply {
         isAntiAlias = true
-        style = android.graphics.Paint.Style.STROKE
-        strokeCap = android.graphics.Paint.Cap.ROUND
-        strokeJoin = android.graphics.Paint.Join.ROUND
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
     }
 
     paths.forEach { pathData ->
         if (pathData.isEraser) {
-            paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR)
+            paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         } else {
             paint.xfermode = null
             paint.color = pathData.color.toArgb()

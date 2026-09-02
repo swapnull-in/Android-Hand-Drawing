@@ -7,13 +7,32 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -26,7 +45,7 @@ data class PathData(
 )
 
 enum class PaperStyle {
-    PLAIN, GRID, DOTS
+    PLAIN, GRID, DOTS, RULED
 }
 
 @Composable
@@ -34,7 +53,7 @@ fun DrawingCanvas(
     modifier: Modifier = Modifier,
     paths: List<PathData>,
     currentPath: Path?,
-    pathUpdateTrigger: Long,
+    pathUpdateTrigger: Long = 0L,
     currentPathColor: Color,
     currentPathStrokeWidth: Float,
     isEraserMode: Boolean,
@@ -45,17 +64,17 @@ fun DrawingCanvas(
     backgroundImage: Bitmap? = null
 ) {
     var cachedBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    var cachedCanvas by remember { mutableStateOf<androidx.compose.ui.graphics.Canvas?>(null) }
+    var cachedCanvas by remember { mutableStateOf<Canvas?>(null) }
 
     // Transformation state for Zoom and Pan
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
-        scale *= zoomChange
+        scale = (scale * zoomChange).coerceIn(0.5f, 5f)
         offset += offsetChange
     }
 
-    // Cache state to track what's already drawn in the bitmap
+    // Cache tracking state
     class CacheState {
         var drawnPathsCount = 0
         var lastBackgroundImage: Bitmap? = null
@@ -63,35 +82,34 @@ fun DrawingCanvas(
     }
     val cacheState = remember { CacheState() }
 
-    // Synchronize the cache with the current state
     fun updateCache(width: Int, height: Int) {
-        val canvas = cachedCanvas ?: return
-        
-        val needsFullRedraw = cacheState.drawnPathsCount > paths.size || 
-                            backgroundImage != cacheState.lastBackgroundImage || 
-                            cacheState.lastCachedSize.width != width || 
-                            cacheState.lastCachedSize.height != height
+        val c = cachedCanvas ?: return
+        val androidCanvas = c.nativeCanvas
+
+        val needsFullRedraw = cacheState.drawnPathsCount > paths.size ||
+                backgroundImage != cacheState.lastBackgroundImage ||
+                cacheState.lastCachedSize.width != width ||
+                cacheState.lastCachedSize.height != height
 
         if (needsFullRedraw) {
-            // Clear and redraw everything
-            canvas.nativeCanvas.drawColor(android.graphics.Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-            
+            androidCanvas.drawColor(android.graphics.Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+
             backgroundImage?.let { bg ->
-                canvas.nativeCanvas.drawBitmap(
-                    bg, 
+                androidCanvas.drawBitmap(
+                    bg,
                     null,
                     Rect(0, 0, width, height),
                     null
                 )
             }
-            
-            val paint = android.graphics.Paint().apply {
+
+            val paint = Paint().apply {
                 isAntiAlias = true
-                style = android.graphics.Paint.Style.STROKE
-                strokeCap = android.graphics.Paint.Cap.ROUND
-                strokeJoin = android.graphics.Paint.Join.ROUND
+                style = Paint.Style.STROKE
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
             }
-            
+
             paths.forEach { pathData ->
                 paint.strokeWidth = pathData.strokeWidth
                 if (pathData.isEraser) {
@@ -100,18 +118,17 @@ fun DrawingCanvas(
                     paint.xfermode = null
                     paint.color = pathData.color.toArgb()
                 }
-                canvas.nativeCanvas.drawPath(pathData.path.asAndroidPath(), paint)
+                androidCanvas.drawPath(pathData.path.asAndroidPath(), paint)
             }
             cacheState.drawnPathsCount = paths.size
         } else if (cacheState.drawnPathsCount < paths.size) {
-            // Incremental draw: only draw new paths
             val paint = Paint().apply {
                 isAntiAlias = true
                 style = Paint.Style.STROKE
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
             }
-            
+
             for (i in cacheState.drawnPathsCount until paths.size) {
                 val pathData = paths[i]
                 paint.strokeWidth = pathData.strokeWidth
@@ -121,11 +138,11 @@ fun DrawingCanvas(
                     paint.xfermode = null
                     paint.color = pathData.color.toArgb()
                 }
-                canvas.nativeCanvas.drawPath(pathData.path.asAndroidPath(), paint)
+                androidCanvas.drawPath(pathData.path.asAndroidPath(), paint)
             }
             cacheState.drawnPathsCount = paths.size
         }
-        
+
         cacheState.lastBackgroundImage = backgroundImage
         cacheState.lastCachedSize = IntSize(width, height)
     }
@@ -134,25 +151,20 @@ fun DrawingCanvas(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
-            // Handle Zoom and Pan (Double finger)
             .transformable(state = transformState)
-            // Handle Drawing (Single finger)
             .pointerInput(scale, offset) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
-                    
-                    // If more than one finger is down initially, don't start drawing
-                    // We check the last change's pointer count
+
                     if (currentEvent.changes.size > 1) return@awaitEachGesture
-                    
+
                     val canvasDown = (down.position - offset) / scale
                     onPathStarted(canvasDown)
-                    
+
                     while (true) {
                         val event = awaitPointerEvent()
                         val anyPressed = event.changes.any { it.pressed }
-                        
-                        // If multi-touch starts during drawing, finish the path
+
                         if (event.changes.size > 1) {
                             onPathEnded()
                             break
@@ -172,43 +184,52 @@ fun DrawingCanvas(
             }
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
     ) {
-        // Observer pathUpdateTrigger to force recomposition
-        val _trigger = pathUpdateTrigger
-        
+        @Suppress("UNUSED_VARIABLE")
+        val trigger = pathUpdateTrigger
+
         val width = size.width.toInt()
         val height = size.height.toInt()
 
-        if (cachedBitmap == null || cachedBitmap!!.width != width || cachedBitmap!!.height != height) {
-            val newBitmap = ImageBitmap(width, height)
-            cachedBitmap = newBitmap
-            cachedCanvas = androidx.compose.ui.graphics.Canvas(newBitmap)
+        if (width > 0 && height > 0) {
+            if (cachedBitmap == null || cachedBitmap!!.width != width || cachedBitmap!!.height != height) {
+                val newBitmap = ImageBitmap(width, height)
+                cachedBitmap = newBitmap
+                cachedCanvas = Canvas(newBitmap)
+            }
+
+            updateCache(width, height)
         }
 
-        updateCache(width, height)
-
-        // Apply Zoom and Pan transformations
         withTransform({
             translate(offset.x, offset.y)
             scale(scale, scale, pivot = Offset.Zero)
         }) {
-            // Draw Paper Style
+            // Draw Paper Style Pattern
             when (paperStyle) {
                 PaperStyle.GRID -> {
-                    val step = 40.dp.toPx()
+                    val step = 36.dp.toPx()
                     for (x in 0..(width / step).toInt()) {
-                        drawLine(Color.LightGray.copy(alpha = 0.3f), Offset(x * step, 0f), Offset(x * step, size.height))
+                        drawLine(Color.LightGray.copy(alpha = 0.35f), Offset(x * step, 0f), Offset(x * step, size.height))
                     }
                     for (y in 0..(height / step).toInt()) {
-                        drawLine(Color.LightGray.copy(alpha = 0.3f), Offset(0f, y * step), Offset(size.width, y * step))
+                        drawLine(Color.LightGray.copy(alpha = 0.35f), Offset(0f, y * step), Offset(size.width, y * step))
                     }
                 }
                 PaperStyle.DOTS -> {
-                    val step = 40.dp.toPx()
+                    val step = 32.dp.toPx()
                     for (x in 0..(width / step).toInt()) {
                         for (y in 0..(height / step).toInt()) {
-                            drawCircle(Color.LightGray.copy(alpha = 0.5f), radius = 2f, center = Offset(x * step, y * step))
+                            drawCircle(Color.LightGray.copy(alpha = 0.6f), radius = 2f, center = Offset(x * step, y * step))
                         }
                     }
+                }
+                PaperStyle.RULED -> {
+                    val step = 40.dp.toPx()
+                    for (y in 1..(height / step).toInt()) {
+                        drawLine(Color(0xFF90CAF9).copy(alpha = 0.4f), Offset(0f, y * step), Offset(size.width, y * step))
+                    }
+                    // Red margin line
+                    drawLine(Color(0xFFEF9A9A).copy(alpha = 0.5f), Offset(48.dp.toPx(), 0f), Offset(48.dp.toPx(), size.height), strokeWidth = 1.5f)
                 }
                 PaperStyle.PLAIN -> {}
             }
@@ -217,11 +238,11 @@ fun DrawingCanvas(
                 drawImage(it)
             }
 
-            currentPath?.let {
+            currentPath?.let { path ->
                 drawPath(
-                    path = it,
+                    path = path,
                     color = if (isEraserMode) Color.Transparent else currentPathColor,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    style = Stroke(
                         width = currentPathStrokeWidth,
                         cap = StrokeCap.Round,
                         join = StrokeJoin.Round
