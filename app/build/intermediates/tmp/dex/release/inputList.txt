@@ -1,2 +1,0 @@
-/Volumes/PLUG IN/Work/AndroidWorkspace/Android Hand Drawing/app/build/intermediates/classes/release
-/Volumes/PLUG IN/Work/AndroidWorkspace/Android Hand Drawing/app/build/intermediates/pre-dexed/release/support-v4-18.0.0-92e0356ec94ee4d530e2f10e68e783e61c245ec4.jar

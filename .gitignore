@@ -1,2 +1,11 @@
-.idea/
-
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/app/build/
+.artifacts/
+*.ap_
+*.apk
+*.dex
